@@ -199,9 +199,15 @@ class MainActivity : AppCompatActivity() {
                 try {
                     Log.e("RefreshSelectWordView ", "${System.currentTimeMillis()}")
 
-                    //刷新一下，因为选中单词后，选中的单词有个带背景色的框，需要重绘刷新或重绘文字才能去掉
-
-                    //如果是在listView等的adapter中，可以直接用 adapter的notify方法整体刷新，这里不是，就直接用控件刷新了
+                    /**
+                     * 弹框消失后，需要刷新一下，因为选中单词后，选中的单词有个带背景色的框，需要重绘刷新才能去掉
+                     *
+                     * 如果是在listView等的adapter中，可以直接用 adapter的 notify 方法整体刷新,
+                     *
+                     * 这里，有个问题。我调用控件的 invalidate() 方法，刷新无效。试过其父控件的刷新，还是不行。
+                     *
+                     * 这里，我暂时没有什么解决办法（adapter 的 notify 方法除外）。请注意
+                     */
 
 
                 } catch (e: Exception) {

@@ -19,10 +19,6 @@ import com.demo.selectwordtv.SpUtil
 import java.util.regex.Pattern
 
 
-/**
- * 2019/07/01
- * 英语文章中，高亮选中单词，并联网获取单词详情TextView
- */
 class SelectWordView : TextView {
 
     private var characterClickListener: CharacterClickListener? = null
