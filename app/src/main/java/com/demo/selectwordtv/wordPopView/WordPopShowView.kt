@@ -216,9 +216,9 @@ class WordPopShowView {
             //提示文字的高度
             var tipHeight = textPaint.descent() - textPaint.ascent()
 
-            //最后额外加点高度。10像素
+            //最后额外加点高度。如：40像素。因为画笔测量有误差，具体情况，视情况而定
             var virtualPopHeightBase =
-                (marginHeight + wordHeight + meanHeight + tipHeight + 10).toInt()
+                (marginHeight + wordHeight + meanHeight + tipHeight + 40).toInt()
 
             Log.e("virtualPopHeightBase is ","$virtualPopHeightBase")
 
