@@ -7,12 +7,12 @@ import android.view.Window
 import androidx.appcompat.app.AppCompatActivity
 import com.demo.selectwordtv.PARAM.Companion.WordPopLocation
 import com.demo.selectwordtv.mySelectWord.CharacterClickListener
-import com.demo.selectwordtv.mySelectWord.SelectWordView
 import com.demo.selectwordtv.wordPopView.WordPopShowView
 import kotlinx.android.synthetic.main.activity_main.*
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
+import kotlin.concurrent.thread
 
 /**
  * https://github.com/otwayz/Scallop
@@ -22,6 +22,8 @@ class MainActivity : AppCompatActivity() {
 
     //单词弹框view
     private var wordPopShowView: WordPopShowView? = null
+
+    private var wordPopDataBean: WordPopDataBean? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,13 +60,12 @@ class MainActivity : AppCompatActivity() {
                     if (sLocation.isNullOrEmpty().not()) {
                         EventBus.getDefault().post(
                             SelectWordEvent(
-                                SelectWordEvent.SelectWordLocation,
+                                SelectWordEvent.SearchSelectWord,
                                 WordPopDataBean(
                                     sLocation!!,//定位相关数据
                                     character,//单词
-                                    "释义1\n释义2"//释义
-                                ),
-                                selectWord_1
+                                    selectWord_1
+                                )
                             )
                         )
                     }
@@ -102,13 +103,12 @@ class MainActivity : AppCompatActivity() {
                     if (sLocation.isNullOrEmpty().not()) {
                         EventBus.getDefault().post(
                             SelectWordEvent(
-                                SelectWordEvent.SelectWordLocation,
+                                SelectWordEvent.SearchSelectWord,
                                 WordPopDataBean(
                                     sLocation!!,//定位相关数据
                                     character,//单词
-                                    "释义1\n释义2\n释义3"//释义
-                                ),
-                                selectWord_2
+                                    selectWord_2
+                                )
                             )
                         )
                     }
@@ -158,23 +158,85 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    //展示 单词弹框
+    private fun showSelectWordPop() {
+
+    }
+
+
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun handleEvent(event: SelectWordEvent) {
 
         when (event.flag) {
 
+            SelectWordEvent.QueryStart -> {
+                //开始进行查询，模拟接口
 
-            SelectWordEvent.SelectWordLocation -> {
+                wordPopDataBean?.queryStatus = PARAM.WordQueryRuning
+                wordPopDataBean?.queryTipContent = "查询中"
+
+                wordPopShowView = WordPopShowView(
+                    this,
+                    wordPopDataBean!!
+                )
+
+                thread {
+                    Thread.sleep(2000)
+                    EventBus.getDefault().post(SelectWordEvent(SelectWordEvent.QueryFail))
+                }
+
+            }
+            SelectWordEvent.QueryFail -> {
+                //查询失败
+                wordPopDataBean?.queryStatus = PARAM.WordQueryFail
+                wordPopDataBean?.queryTipContent = "查询失败"
+
+                wordPopShowView?.refreshWordPop(
+                    wordPopDataBean!!,
+                    null
+                )
+
+                thread {
+                    Thread.sleep(2000)
+                    EventBus.getDefault().post(SelectWordEvent(SelectWordEvent.QuerySuccess))
+                }
+
+            }
+            SelectWordEvent.QuerySuccess -> {
+                //查询成功
+
+
+                wordPopDataBean?.queryStatus = PARAM.WordQuerySuccess
+                wordPopDataBean?.queryTipContent = "查看详情"
+
+                var queryResultBean:QueryResultBean = QueryResultBean(
+                    wordPopDataBean?.wordContent.orEmpty(),
+                    "释义1；释义2；释义3"
+
+                )
+
+                wordPopShowView?.refreshWordPop(
+                    wordPopDataBean!!,
+                    queryResultBean
+                )
+
+            }
+
+            SelectWordEvent.SearchSelectWord -> {
+
+                //开始搜索选中单词
+
+                //模拟请求过程。开始请求、2秒后处理失败、再2秒后，展示数据
 
                 try {
 
-                    var sTv = event.obj as SelectWordView
+                    wordPopDataBean = event.bean
 
-                    wordPopShowView = WordPopShowView(this, sTv, event.bean!!)
+                    EventBus.getDefault().post(SelectWordEvent(SelectWordEvent.QueryStart))
+
 
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    Log.e("1 == ","e is $e")
                 }
 
             }
@@ -189,7 +251,6 @@ class MainActivity : AppCompatActivity() {
 
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    Log.e("2 == ","e is $e")
                 }
 
             }

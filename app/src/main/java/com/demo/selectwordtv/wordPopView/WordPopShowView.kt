@@ -1,16 +1,15 @@
 package com.demo.selectwordtv.wordPopView
 
 import android.content.Context
+import android.graphics.Paint
+import android.text.TextPaint
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import com.demo.selectwordtv.R
-import com.demo.selectwordtv.SelectWordEvent
-import com.demo.selectwordtv.UiUtils
-import com.demo.selectwordtv.WordPopDataBean
+import com.demo.selectwordtv.*
 import org.greenrobot.eventbus.EventBus
 import kotlin.properties.Delegates
 
@@ -40,15 +39,20 @@ class WordPopShowView {
 
     private var wordTv: TextView? = null
     private var wordMeanTv: TextView? = null
-    private var wordMore: TextView? = null
+    private var wordPopTip: TextView? = null
 
     private var pop_root: RelativeLayout? = null
 
-    constructor(context: Context, view: View, bean: WordPopDataBean) {
+    private var wordPopDataBean: WordPopDataBean? = null
+    private var queryResultBean: QueryResultBean? = null
+
+    constructor(context: Context, bean: WordPopDataBean) {
 
         this.context = context
 
-        locationView = view
+        wordPopDataBean = bean
+
+        locationView = bean.selectWordView
 
         initPopupWindow(bean)
 
@@ -70,156 +74,275 @@ class WordPopShowView {
 
         wordTv = popupWindowView.findViewById(R.id.wordTv)
         wordMeanTv = popupWindowView.findViewById(R.id.wordMeanTv)
-        wordMore = popupWindowView.findViewById(R.id.wordMore)
-
-        wordTv?.text = bean.wordContent
-
-        wordMeanTv?.text = bean.wordMean
-
-        wordMore?.setOnClickListener {
-            Toast.makeText(context, "查看更多", Toast.LENGTH_SHORT).show()
-            popDimss()
-        }
+        wordPopTip = popupWindowView.findViewById(R.id.wordPopTip)
 
         pop_root = popupWindowView.findViewById(R.id.pop_root)
-
-        pop_root?.setOnClickListener {
-            popDimss()
-        }
 
         popupWindow.setOutsideTouchable(true);
         popupWindow.setFocusable(false);
 
         popupWindow.animationStyle = R.style.WordPopShowAnim
 
-        //状态栏高度
-        var statuBarHeight = UiUtils.getStatusBarHeight(context)
+        handleShow()
+    }
 
-        //屏幕宽度
-        val screenWidth = UiUtils.getScreenWidth(context)
 
-        //屏幕高度
-        val screenHeight = UiUtils.getScreenHeight(context)
+    //处理展示
+    private fun handleShow() {
 
-        //标题高度
-        var titleHeight = UiUtils.dp2px(context, 44f)
+        try {
 
-        var location = bean.location
+            pop_root?.setOnClickListener {
+                popDimss()
+            }
 
-        var locations = location.split("-")
+            if (wordPopDataBean!!.queryStatus != PARAM.WordQuerySuccess) {
+                //不是查询成功状态
 
-        //弹框后，三角形的尖角，所在 x 轴位置
-        var xLocation: Int = locations[0].toInt()
+                wordTv?.text = wordPopDataBean!!.wordContent
 
-        //点击的单词，距离屏幕顶部的距离（含状态栏）
-        var yLocation: Int = locations[1].toInt()
+                wordMeanTv?.visibility = View.GONE
 
-        //点击的单词，在 TextView 中，单词顶部 距离控件顶部的距离
-        var topValue: Int = locations[2].toInt()
+                wordPopTip?.text = wordPopDataBean!!.queryTipContent
 
-        //点击的单词，在 TextView 中，单词底部 距离控件部的距离
-        var bottomValue: Int = locations[3].toInt()
+            } else {
+                //查询成功
 
-        var popHeight_base = 0
+                wordMeanTv?.visibility = View.GONE
 
-        //设置完内容后，通知系统，去测量一下，后面就能拿到
-        wordPopContent?.measure(0, 0)
+                wordPopTip?.text = wordPopDataBean!!.queryTipContent
 
-        popHeight_base = wordPopContent!!.measuredHeight
+                wordPopTip?.setOnClickListener {
+                    Toast.makeText(context, "查看更多", Toast.LENGTH_SHORT).show()
+                    popDimss()
+                }
 
-        Log.e("popHeight_base ", "$popHeight_base")
 
-        //三角形高度
-        var triangle_height = UiUtils.dp2px(context, 8f)
+                //填充数据
 
-        //三角形宽度
-        var triangle_width = UiUtils.dp2px(context, 16f)
+                wordTv?.text = wordPopDataBean!!.wordContent
 
-        //完整的弹框，真实高度
-        var realHeight = popHeight_base + triangle_height
+                var means = queryResultBean!!.means
 
-        //文字上方预计高度
-        var expectTopHeight = yLocation - statuBarHeight - titleHeight
+                if (means.isNullOrEmpty().not()) {
 
-        //文字下方预计高度
-        var expectBottomHeight = screenHeight - (yLocation - statuBarHeight + (bottomValue - topValue))
+                    var meanList = means.split(";", "；")
 
-        if (expectTopHeight >= realHeight) {
-            //文字上面的空间可以容纳弹框
+                    if (meanList.isNullOrEmpty().not()) {
 
-            myTriangleUpView?.visibility = View.GONE
-            myTriangleDownView?.visibility = View.VISIBLE
+                        wordMeanTv?.visibility = View.VISIBLE
 
-            var lp: LinearLayout.LayoutParams = myTriangleDownView?.layoutParams as LinearLayout.LayoutParams
+                        var sb: StringBuilder = StringBuilder()
 
-            var resultMargin = xLocation - triangle_width / 2
+                        for (i in 0 until meanList!!.size) {
 
-            if (xLocation - triangle_width / 2 < UiUtils.dp2px(context, 20f)) {
+                            sb.append(meanList[i])
 
-                resultMargin = UiUtils.dp2px(context, 20f)
+                            if (i != meanList.size - 1) {
+                                sb.append("\n")
+                            }
 
-            } else if (xLocation + triangle_width / 2 > screenWidth - UiUtils.dp2px(context, 20f)) {
-
-                resultMargin = screenWidth - UiUtils.dp2px(context, 20f) - triangle_width
+                        }
+                        wordMeanTv?.text = sb.toString()
+                    }
+                }
 
             }
 
-            lp.marginStart = resultMargin
+            //以下开始定位等计算操作
 
-            myTriangleDownView?.layoutParams = lp
+            //状态栏高度
+            var statuBarHeight = UiUtils.getStatusBarHeight(context)
 
-            var contentLp: RelativeLayout.LayoutParams = wordPopContentView?.layoutParams as RelativeLayout.LayoutParams
+            //屏幕宽度
+            val screenWidth = UiUtils.getScreenWidth(context)
 
-            contentLp.topMargin = yLocation - statuBarHeight - realHeight
+            //屏幕高度
+            val screenHeight = UiUtils.getScreenHeight(context)
 
-            wordPopContentView?.layoutParams = contentLp
+            //标题高度
+            var titleHeight = UiUtils.dp2px(context, 40f)
 
-            EventBus.getDefault().post(SelectWordEvent(SelectWordEvent.ShowSelectWordView))
+            var location = wordPopDataBean!!.location
 
-        } else if (expectBottomHeight > realHeight) {
-            //文字上面的空间不足以容纳弹框，文字下面的空间可以
+            var locations = location.split("-")
 
-            myTriangleUpView?.visibility = View.VISIBLE
-            myTriangleDownView?.visibility = View.GONE
+            //弹框后，三角形的尖角，所在 x 轴位置
+            var xLocation: Int = locations[0].toInt()
+
+            //点击的单词，距离屏幕顶部的距离（含状态栏）
+            var yLocation: Int = locations[1].toInt()
+
+            //点击的单词，在 TextView 中，单词顶部 距离控件顶部的距离
+            var topValue: Int = locations[2].toInt()
+
+            //点击的单词，在 TextView 中，单词底部 距离控件部的距离
+            var bottomValue: Int = locations[3].toInt()
+
+            //弹框距离左右各 20dp，所以减掉 40
+            var widthSpec = View.MeasureSpec.makeMeasureSpec(
+                (screenWidth - UiUtils.dp2px(context, 40f)).toInt(),
+                View.MeasureSpec.AT_MOST
+            )
+            wordPopContent?.measure(widthSpec, 0)
+
+            //文字弹框的高（基本高度，不含三角形）
+            var realPopHeightBase = wordPopContent!!.measuredHeight
+
+            Log.e("realPopHeightBase is ","$realPopHeightBase")
+
+            //===== 以下模拟最大高度进行计算 开始计算=====
+
+            //内容区域中，margin相关的值的总和
+            var marginHeight = UiUtils.dp2px(context, 20f) * 4
+
+            var textPaint: TextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
+
+            //单词大小是 20dp
+            textPaint.textSize = UiUtils.dp2px(context, 20f).toFloat()
+
+            //单词的高度
+            var wordHeight = textPaint.descent() - textPaint.ascent()
+
+            //释义文字的大小是 15dp
+            textPaint.textSize = UiUtils.dp2px(context, 15f).toFloat()
+
+            //释义最多2行，这里就按2行算
+            var meanHeight = (textPaint.descent() - textPaint.ascent()) * 2
+
+            //提示文字的大小是 15dp
+            textPaint.textSize = UiUtils.dp2px(context, 15f).toFloat()
+
+            //提示文字的高度
+            var tipHeight = textPaint.descent() - textPaint.ascent()
+
+            //最后额外加点高度。10像素
+            var virtualPopHeightBase =
+                (marginHeight + wordHeight + meanHeight + tipHeight + 10).toInt()
+
+            Log.e("virtualPopHeightBase is ","$virtualPopHeightBase")
+
+            //===== 以上模拟最大高度进行计算 计算结束=====
+
+            //三角形高度
+            var triangle_height = UiUtils.dp2px(context, 8f)
+
+            //三角形宽度
+            var triangle_width = UiUtils.dp2px(context, 16f)
+
+            //完整的弹框，真实高度
+            var realHeight = realPopHeightBase + triangle_height
+
+            //虚拟高度
+            var virtualHeight = virtualPopHeightBase + triangle_height
+
+            //文字上方预计高度
+            var expectTopHeight = yLocation - statuBarHeight - titleHeight
+
+            //文字下方预计高度
+            var expectBottomHeight = screenHeight - (yLocation - statuBarHeight + (bottomValue - topValue))
+
+            if (expectTopHeight >= virtualHeight) {
+                //文字上面的空间可以容纳弹框
+
+                myTriangleUpView?.visibility = View.GONE
+                myTriangleDownView?.visibility = View.VISIBLE
+
+                var lp: LinearLayout.LayoutParams = myTriangleDownView?.layoutParams as LinearLayout.LayoutParams
+
+                var resultMargin = xLocation - triangle_width / 2
+
+                if (xLocation - triangle_width / 2 < UiUtils.dp2px(context, 20f)) {
+
+                    resultMargin = UiUtils.dp2px(context, 20f)
+
+                } else if (xLocation + triangle_width / 2 > screenWidth - UiUtils.dp2px(context, 20f)) {
+
+                    resultMargin = screenWidth - UiUtils.dp2px(context, 20f) - triangle_width
+
+                }
+
+                lp.marginStart = resultMargin
+
+                myTriangleDownView?.layoutParams = lp
+
+                var contentLp: RelativeLayout.LayoutParams =
+                    wordPopContentView?.layoutParams as RelativeLayout.LayoutParams
+
+                contentLp.topMargin = yLocation - statuBarHeight - realHeight
+
+                wordPopContentView?.layoutParams = contentLp
+
+                EventBus.getDefault().post(SelectWordEvent(SelectWordEvent.ShowSelectWordView))
+
+            } else if (expectBottomHeight > virtualHeight) {
+                //文字上面的空间不足以容纳弹框，文字下面的空间可以
+
+                myTriangleUpView?.visibility = View.VISIBLE
+                myTriangleDownView?.visibility = View.GONE
 
 
-            var lp: LinearLayout.LayoutParams = myTriangleUpView?.layoutParams as LinearLayout.LayoutParams
+                var lp: LinearLayout.LayoutParams = myTriangleUpView?.layoutParams as LinearLayout.LayoutParams
 
-            var resultMargin = xLocation - triangle_width / 2
+                var resultMargin = xLocation - triangle_width / 2
 
-            if (xLocation - triangle_width / 2 < UiUtils.dp2px(context, 20f)) {
+                if (xLocation - triangle_width / 2 < UiUtils.dp2px(context, 20f)) {
 
-                resultMargin = UiUtils.dp2px(context, 20f)
+                    resultMargin = UiUtils.dp2px(context, 20f)
 
-            } else if (xLocation + triangle_width / 2 > screenWidth - UiUtils.dp2px(context, 20f)) {
+                } else if (xLocation + triangle_width / 2 > screenWidth - UiUtils.dp2px(context, 20f)) {
 
-                resultMargin = screenWidth - UiUtils.dp2px(context, 20f) - triangle_width
+                    resultMargin = screenWidth - UiUtils.dp2px(context, 20f) - triangle_width
+
+                }
+
+                lp.marginStart = resultMargin
+
+                myTriangleUpView?.layoutParams = lp
+
+                var contentLp: RelativeLayout.LayoutParams =
+                    wordPopContentView?.layoutParams as RelativeLayout.LayoutParams
+
+                contentLp.topMargin = yLocation - statuBarHeight + (bottomValue - topValue)
+
+                wordPopContentView?.layoutParams = contentLp
+
+                EventBus.getDefault().post(SelectWordEvent(SelectWordEvent.ShowSelectWordView))
+
+            } else {
+
+                /**
+                 * 极限情况，文字上下的空间，都容纳不下弹框
+                 *
+                 * 不作处理
+                 */
 
             }
 
-            lp.marginStart = resultMargin
+            pop_root?.requestLayout()
 
-            myTriangleUpView?.layoutParams = lp
 
-            var contentLp: RelativeLayout.LayoutParams = wordPopContentView?.layoutParams as RelativeLayout.LayoutParams
-
-            contentLp.topMargin = yLocation - statuBarHeight + (bottomValue - topValue)
-
-            wordPopContentView?.layoutParams = contentLp
-
-            EventBus.getDefault().post(SelectWordEvent(SelectWordEvent.ShowSelectWordView))
-
-        } else {
-
-            /**
-             * 极限情况，文字上下的空间，都容纳不下弹框
-             *
-             * 不作处理
-             */
-
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
 
     }
+
+
+    /**
+     * 刷新单词弹框
+     */
+    fun refreshWordPop(bean: WordPopDataBean, qBean: QueryResultBean?) {
+
+        wordPopDataBean = bean
+
+        queryResultBean = qBean
+
+        locationView = wordPopDataBean!!.selectWordView
+
+        handleShow()
+    }
+
 
     fun showView() {
         popupWindow.showAtLocation(

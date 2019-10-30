@@ -7,8 +7,13 @@ class SelectWordEvent {
 
     companion object {
 
-        //选择单词的坐标事件
-        val SelectWordLocation = "SelectWordLocation"
+        //搜索选中单词
+        val SearchSelectWord = "SearchSelectWord"
+
+
+        val QueryStart = "QueryStart"
+        val QueryFail = "QueryFail"
+        val QuerySuccess = "QuerySuccess"
 
         //展示弹框
         val ShowSelectWordView = "ShowSelectWordView"
@@ -22,12 +27,9 @@ class SelectWordEvent {
 
     var bean: WordPopDataBean? = null
 
-    var obj: Any? = null
-
-    constructor(flag: String, bean: WordPopDataBean? = null, obj: Any? = null) {
+    constructor(flag: String, bean: WordPopDataBean? = null) {
         this.flag = flag
         this.bean = bean
-        this.obj = obj
     }
 
 }
