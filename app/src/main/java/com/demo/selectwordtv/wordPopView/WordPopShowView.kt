@@ -189,9 +189,15 @@ class WordPopShowView {
             //文字弹框的高（基本高度，不含三角形）
             var realPopHeightBase = wordPopContent!!.measuredHeight
 
-            Log.e("realPopHeightBase is ","$realPopHeightBase")
+            Log.e("realPopHeightBase is ", "$realPopHeightBase")
 
             //===== 以下模拟最大高度进行计算 开始计算=====
+
+            /**
+             * 关于计算，请详细看下
+             *
+             * https://blog.csdn.net/u014620028/article/details/102831595
+             */
 
             //内容区域中，margin相关的值的总和
             var marginHeight = UiUtils.dp2px(context, 20f) * 4
@@ -200,27 +206,30 @@ class WordPopShowView {
 
             //单词大小是 20dp
             textPaint.textSize = UiUtils.dp2px(context, 20f).toFloat()
+            var mFontMetrics_word: Paint.FontMetrics = textPaint.fontMetrics
 
             //单词的高度
-            var wordHeight = textPaint.descent() - textPaint.ascent()
+            var wordHeight = mFontMetrics_word.bottom - mFontMetrics_word.top
 
             //释义文字的大小是 15dp
             textPaint.textSize = UiUtils.dp2px(context, 15f).toFloat()
+            var mFontMetrics_mean: Paint.FontMetrics = textPaint.fontMetrics
 
-            //释义最多2行，这里就按2行算
-            var meanHeight = (textPaint.descent() - textPaint.ascent()) * 2
+            //释义最多展示 2行，这里就按 2行 算
+            var meanHeight = (mFontMetrics_mean.bottom - mFontMetrics_mean.top) * 2
 
             //提示文字的大小是 15dp
             textPaint.textSize = UiUtils.dp2px(context, 15f).toFloat()
+            var mFontMetrics_tip: Paint.FontMetrics = textPaint.fontMetrics
 
             //提示文字的高度
-            var tipHeight = textPaint.descent() - textPaint.ascent()
+            var tipHeight = mFontMetrics_tip.bottom - mFontMetrics_tip.top
 
             //最后额外加点高度。如：40像素。因为画笔测量有误差，具体情况，视情况而定
             var virtualPopHeightBase =
-                (marginHeight + wordHeight + meanHeight + tipHeight + 40).toInt()
+                (marginHeight + wordHeight + meanHeight + tipHeight + 5).toInt()
 
-            Log.e("virtualPopHeightBase is ","$virtualPopHeightBase")
+            Log.e("virtualPopHeightBase is ", "$virtualPopHeightBase")
 
             //===== 以上模拟最大高度进行计算 计算结束=====
 
